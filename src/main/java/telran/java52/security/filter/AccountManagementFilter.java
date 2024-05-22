@@ -43,14 +43,15 @@ public class AccountManagementFilter implements Filter {
 				}
 			}catch(Exception e){
 				response.sendError(409);
-			}
+		}
+
 		}
 		chain.doFilter(request, response);
 
 	}
 	
 	private boolean checkEndpoint(String method, String path) {	
-		String pattern = "/account/user/.+$";
+		String pattern = "/account/user/[^/]+$";
 		return ((HttpMethod.PUT.matches(method) || HttpMethod.DELETE.matches(method)) && path.matches(pattern));
 	}
 
