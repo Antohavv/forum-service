@@ -22,12 +22,11 @@ import telran.java52.accounting.dao.UserAccountRepository;
 import telran.java52.accounting.dto.exceptions.IncorrectRoleException;
 import telran.java52.accounting.model.Role;
 import telran.java52.accounting.model.UserAccount;
+import telran.java52.security.model.User;
 
 @Component
-@RequiredArgsConstructor
 @Order(20)
-public class AdminManagingRolesFilter implements Filter {
-	final UserAccountRepository userAccountRepository;
+public class AdminManagingRolesFilter implements Filter {	
 
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain)
@@ -35,11 +34,9 @@ public class AdminManagingRolesFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) req;
 		HttpServletResponse response = (HttpServletResponse) resp;
 
-		if (checkEndpoint(request.getMethod(), request.getServletPath())) {
-
-			String principal = request.getUserPrincipal().getName();
-			UserAccount userAccount = userAccountRepository.findById(principal).get();
-			if (!userAccount.getRoles().contains(Role.ADMINISTRATOR)) {
+		if (checkEndpoint(request.getMethod(), request.getServletPath())) {			
+			User user = (User) request.getUserPrincipal();			
+			if (!user.getRoles().contains(Role.ADMINISTRATOR.name())) {
 				response.sendError(403, "You not allowed to access this resource");
 				return;
 			}

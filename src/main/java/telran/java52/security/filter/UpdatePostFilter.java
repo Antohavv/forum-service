@@ -19,7 +19,7 @@ import telran.java52.post.model.Post;
 
 @Component
 @RequiredArgsConstructor
-@Order(60)
+@Order(50)
 
 public class UpdatePostFilter implements Filter {
 	final PostRepository postRepository;
