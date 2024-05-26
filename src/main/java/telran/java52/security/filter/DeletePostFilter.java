@@ -1,8 +1,8 @@
 package telran.java52.security.filter;
 
 import java.io.IOException;
-import java.security.Principal;
 
+import org.apache.catalina.User;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
@@ -18,11 +18,15 @@ import lombok.RequiredArgsConstructor;
 import telran.java52.accounting.dao.UserAccountRepository;
 import telran.java52.accounting.model.Role;
 import telran.java52.accounting.model.UserAccount;
+import telran.java52.post.dao.PostRepository;
+import telran.java52.post.model.Post;
 
 @Component
 @RequiredArgsConstructor
-@Order(30)
-public class AccountManagementFilter implements Filter {
+@Order(70)
+
+public class DeletePostFilter implements Filter {
+	final PostRepository postRepository;
 	final UserAccountRepository userAccountRepository;
 
 	@Override
@@ -30,29 +34,33 @@ public class AccountManagementFilter implements Filter {
 			throws IOException, ServletException {
 		HttpServletRequest request = (HttpServletRequest) req;
 		HttpServletResponse response = (HttpServletResponse) resp;
-		if(checkEndpoint(request.getMethod(), request.getServletPath())) {
-			try {
-				Principal principal = request.getUserPrincipal();
-				String userName = principal.getName();
-				UserAccount userAccount = userAccountRepository.findById(userName).orElseThrow(RuntimeException::new);
-				if(userAccount.getRoles().contains(Role.ADMINISTRATOR) && HttpMethod.PUT.matches(request.getMethod())) {
-					throw new RuntimeException();
-				}								
-				if(!userName.equals(userAccount.getLogin())) {
-					throw new RuntimeException();
-				}
-			}catch(Exception e){
-				response.sendError(409);
+		
+		if (checkEndpoint(request.getMethod(), request.getServletPath())) {
+			String principal = request.getUserPrincipal().getName();
+			UserAccount userAccount = userAccountRepository.findById(principal).get();
+			String[] parts = request.getServletPath().split("/");
+			String postId = parts[parts.length - 1];
+
+			Post post = postRepository.findById(postId).orElse(null);
+			if (post == null) {
+				response.sendError(404, "Not found");
+				return;
+			}
+
+			if (!(principal.equalsIgnoreCase(post.getAuthor()) || userAccount.getRoles().contains(Role.MODERATOR))) {
+				response.sendError(403, "You dont have permission to access this resource");
+				return;
+
+			}
 		}
 
-		}
 		chain.doFilter(request, response);
 
 	}
-	
-	private boolean checkEndpoint(String method, String path) {	
-		String pattern = "/account/user/[^/]+$";
-		return ((HttpMethod.PUT.matches(method) || HttpMethod.DELETE.matches(method)) && path.matches(pattern));
+
+	private boolean checkEndpoint(String method, String path) {
+		return (HttpMethod.DELETE.matches(method) && path.matches("/forum/post/\\w+"));
+
 	}
 
 }
